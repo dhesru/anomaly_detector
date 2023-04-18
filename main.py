@@ -66,8 +66,7 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window):
         X = feature_engineer(X, window=window)
 
     if scale:
-        #scaler = StandardScaler()
-        scaler = MinMaxScaler()
+        scaler = StandardScaler()
         X = scaler.fit_transform(X)
 
     if pca:
