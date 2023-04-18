@@ -110,9 +110,9 @@ def detect_anomalies(scale,pca,n_comp,fe):
         print('start anomaly detection')
         p, r, f1, tp, fp, fn, results = anomaly_detection_pipeline(df, scale=scale, pca=pca, n_comp=n_comp, fe=fe,
                                                                    window=window)
-        row_dict = {'precision': p, 'recall': r, 'f1_score': f1}
+        row_dict = {'precision': [p], 'recall': [r], 'f1_score': [f1]}
         print('anomaly detection completed')
-    df_res = pd.DataFrame.to_dict(row_dict)
+    df_res = pd.DataFrame.from_dict(row_dict)
 
     results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
     condition_cols = results.columns[results.columns.str.contains('condition')]
