@@ -110,8 +110,8 @@ def detect_anomalies(scale,pca,n_comp,fe):
         print('start anomaly detection')
         p, r, f1, tp, fp, fn, results = anomaly_detection_pipeline(df, scale=scale, pca=pca, n_comp=n_comp, fe=fe,
                                                                    window=window)
-        # row_dict = {'precision': p, 'recall': r, 'f1_score': f1,
-        #             'scale': scale, 'pca': pca, 'feature_eng': fe, 'window': window, 'tp': tp, 'fp': fp, 'fn': fn}
+        row_dict = {'precision': p, 'recall': r, 'f1_score': f1,
+                     'scale': scale, 'pca': pca, 'feature_eng': fe, 'window': window, 'tp': tp, 'fp': fp, 'fn': fn}
         print('anomaly detection completed')
 
     results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
@@ -135,6 +135,7 @@ def detect_anomalies(scale,pca,n_comp,fe):
             plt.scatter(y=results[anomaly_col], x=results.index, c='red')
             st.pyplot(plt)
             plt.clf()
+    st.write(row_dict)
 
 st.write('This anomaly detector derives condition indicators such as Standard Deviation, Mean,Kurtosis, Variance and Max were derived using a rolling window of size 5. '
          'The derived features are then condensed into 5 components using Principal Component Analysis'
