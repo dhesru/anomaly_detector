@@ -1,0 +1,3 @@
+This repositry is used for multivariate anomaly detection in time series data. It is a Proof-of-Concept on anomaly detection. 
+
+This anomaly detector derives condition indicators such as Standard Deviation, Mean,Kurtosis, Variance and Max were derived using a rolling window of size 5. The derived features are then condensed into 5 components using Principal Component AnalysisThese features are the fed into Isolation forest for anomalous points to be predictedTo begin detecting anomalous points in your multivariate time series, proceed to upload.
