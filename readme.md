@@ -5,6 +5,7 @@ This anomaly detector derives condition indicators such as Standard Deviation, M
 
 **How to use:**
 
-Upload multivariate time series.
-Once CSV is uploaded, click on Start Anomaly Detection
-This will take ~1-2 minutes. Post completion, click on See Anomalous Points for the Red points in the time series chart. These represent the outliers.
+- Upload **multivariate time series**.
+- Once CSV is uploaded, click on Start Anomaly Detection
+This will take ~1-2 minutes. 
+- Post completion, click on See Anomalous Points for the Red points in the time series chart. These represent the outliers.
