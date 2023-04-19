@@ -5,19 +5,23 @@ import anomaly_detect
 import data_visualization
 import helpers
 
-
+st.sidebar.image("https://s3.ap-southeast-1.amazonaws.com/files-scs-prod/public%2Fimages%2F1667201979950-image.png", use_column_width=True)
 EXAMPLE_NO = 1
 def streamlit_menu(example=1):
     if example == 1:
         # 1. as sidebar menu
         with st.sidebar:
             selected = option_menu(
-                menu_title="Anomaly Detector",  # required
-                options=["Upload Data", "Detect Anomalies","Visualization of Results","Information"],
-                icons=["cloud-upload", "bar-chart-fill", "robot", "clipboard-check"],  # optional
-                menu_icon="tools",  # optional
-                default_index=0,  # optional
+                    menu_title="Anomaly Detector",  # required
+                    options=["Upload Data", "Detect Anomalies","Visualization of Results","Information"],
+                    icons=["cloud-upload", "bi bi-search", "bi bi-graph-up-arrow", "bi bi-info-square"],  # optional
+                    menu_icon="tools",  # optional
+                    default_index=0,  # optional
+
+                    styles = {"nav-link-selected": {"background-color": "#009999"},
+                         }
             )
+
         return selected
 
 selected = streamlit_menu(example=EXAMPLE_NO)

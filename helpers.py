@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
 
+
+def convert(string):
+    list1 = []
+    list1[:0] = string
+    return list1
+
 def data_uploader():
     '''This function is used for uploading CSV file'''
     st.title('Welcome to Anomaly Detector')
