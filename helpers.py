@@ -34,3 +34,9 @@ def info():
              ' These features are the fed into Isolation forest for anomalous points to be predicted.'
              ' To begin detecting anomalous points in your multivariate time series, proceed to upload.'
              )
+    st.subheader("Upload Data")
+    st.write('This tab is used for uploading of Sensor readings for anomaly detection. Once you have uploaded the CSV, select the sensor readings that needs to be utilized.')
+    st.subheader("Detect Anomalies")
+    st.write('This tab is used to detect anomalies. Once anomalies are detected, the condition indicators and evaluation metrics will be displayed.')
+    st.subheader("Visualization of Results")
+    st.write('This tab is used for visualization of the results. It displays the Principal Compoenents on the data and anomalous points on time series data.')
