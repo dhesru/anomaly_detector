@@ -1,12 +1,9 @@
 import streamlit as st
 import numpy as np
 from streamlit_option_menu import option_menu
-
 import anomaly_detect
 import data_visualization
 import helpers
-import info
-
 
 
 EXAMPLE_NO = 1

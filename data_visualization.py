@@ -5,6 +5,7 @@ import plotly.express as px
 
 
 def viz_anomaly_data():
+    '''Vizualize Anomaly Detection results'''
     st.title('Visualize Detected Anomalies')
     if 'iso_results' not in st.session_state:
         st.write('Please upload time series data and run a anomaly detection model to visualize the anomalous points.')
@@ -17,7 +18,7 @@ def viz_anomaly_data():
             sensor_name = sensor + '_a'
             results[sensor_name] = results[sensor] * results.anomaly_con
 
-        with st.expander('See Principal Component Analysis Chart'):
+        with st.expander('View Principal Component Analysis Chart'):
             if 'pca' in st.session_state:
                 pca = st.session_state.pca
                 df = st.session_state.df
@@ -26,7 +27,7 @@ def viz_anomaly_data():
                 st.pyplot(plt)
                 plt.cla()
 
-        with st.expander("See Anomalous points on time series"):
+        with st.expander("View Anomalous points on time series"):
             for i in range(ncol):
                 plt.plot(results[sensor_cols[i]],color='#1520A6',alpha=0.8)
                 plt.title("Anomalous points for " + str(sensor_cols[i]))

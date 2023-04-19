@@ -17,7 +17,8 @@ def data_uploader():
         st.session_state.df = df
         if st.button('Confirm variables selected'):
             st.session_state.sensors = sensors
-            st.warning('You have selecter the following columns: ', sensors)
+            print_statement = 'You have selecter the following columns: ' + str(sensors)
+            st.warning(print_statement)
 
 def info():
     '''Prints information of the page.'''
