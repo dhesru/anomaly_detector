@@ -63,6 +63,9 @@ def get_conf_matrix_metrics(df_c):
     fn = val_counts.get('FN', 0)
     return tp, fp, fn
 
+def norm_score(x):
+    '''Normalize Probability Score'''
+    return 1 - (x - np.min(x)) / (np.max(x) - np.min(x))
 
 def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
     df_c = df.copy()
@@ -100,9 +103,11 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
     if isinstance(X, np.ndarray):
         isf = IsolationForest(random_state=0, contamination=0.0009).fit(X)
         df_c['anomaly'] = pd.Series(isf.predict(X))
+        df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X)))
     else:
         isf = IsolationForest(random_state=0, contamination=0.0009).fit(X.values)
         df_c['anomaly'] = pd.Series(isf.predict(X.values))
+        df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
     if use_label:
         df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x[label]), axis=1)
 
@@ -175,11 +180,8 @@ def detect_anomalies():
                     st.write('Detected anomalies are shown in the last column. True: Values are anomalous, False: Values are normal')
                     eng_fe = eng_fe.reindex(sorted(eng_fe.columns), axis=1)
                     eng_fe.loc[:,'anomaly'] = results.anomaly
-                    eng_fe.anomaly = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
-
-                    def color_anomalies(val):
-                        color = 'green' if val else 'red'
-                        return f'background-color: {color}'
+                    eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
+                    eng_fe['probability_score'] = results.probability_score
 
                     st.dataframe(eng_fe)
 
