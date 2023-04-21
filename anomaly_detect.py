@@ -37,7 +37,12 @@ def feature_engineer(data, window):
 
     return data
 
-
+def check_label():
+    label = st.session_state.label
+    if label == "No Label":
+        return False , label
+    else:
+        return True, label
 def compare_anomaly(anomaly, label):
     if anomaly == -1 and label == 1:
         return 'TP'
@@ -63,6 +68,8 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()
+    use_label, label = check_label()
+    precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
     if fe:
         X = feature_engineer(X, window=window)
         eng_fe = X.copy()
@@ -71,14 +78,18 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
 
-
     if pca:
         pca = PCA(n_components=n_comp)
         pca.fit(X)
         X = pca.transform(X)
         st.session_state.pca = X
-        X = pd.DataFrame(np.column_stack([df_c[['label']], X]))
-        col_names = ['label']
+
+        if use_label:
+            X = pd.DataFrame(np.column_stack([df_c[[label]], X]))
+            col_names = [label]
+        else:
+            X = pd.DataFrame(X)
+            col_names = list()
         X_feats = list()
         for i in range(n_comp):
             col_name = 'pca_' + str(i)
@@ -92,22 +103,39 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
     else:
         isf = IsolationForest(random_state=0, contamination=0.0009).fit(X.values)
         df_c['anomaly'] = pd.Series(isf.predict(X.values))
-    df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x.label), axis=1)
+    if use_label:
+        df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x[label]), axis=1)
 
-    tp, fp, fn = get_conf_matrix_metrics(df_c)
-    try:
-        precision = (tp / (tp + fp)) * 100
-    except ZeroDivisionError:
-        precision = np.nan
+        tp, fp, fn = get_conf_matrix_metrics(df_c)
+        try:
+            precision = (tp / (tp + fp)) * 100
+        except ZeroDivisionError:
+            precision = np.nan
 
-    try:
-        recall = (tp / (tp + fn)) * 100
-    except ZeroDivisionError:
-        recall = np.nan
+        try:
+            recall = (tp / (tp + fn)) * 100
+        except ZeroDivisionError:
+            recall = np.nan
 
-    f1_score = (precision * recall) / (precision + recall)
+        f1_score = (precision * recall) / (precision + recall)
 
     return precision, recall, f1_score, tp, fp, fn, df_c,eng_fe
+
+@st.experimental_memo
+def convert_df(df):
+    return df.to_csv(index=False).encode('utf-8')
+
+def download_csv(df):
+    '''Function to download dataframe into CSV'''
+    csv = convert_df(df)
+    st.download_button(
+        "Download file",
+        csv,
+        "deteced_anomalies.csv",
+        "text/csv",
+        key='download-csv'
+    )
+
 
 def detect_anomalies():
     st.title('Detect Anomalies')
@@ -116,7 +144,6 @@ def detect_anomalies():
 
     else:
         df = st.session_state.df
-
         pca = True
         scale= True
         n_comp = 2 # number of PCA components
@@ -144,12 +171,26 @@ def detect_anomalies():
                     st.session_state.iso_results = results
                     st.success('Anomalies have been detected!')
 
-                    st.title('Condition Indicators')
+                    st.title('Condition Indicators and Detected Anomalies')
+                    st.write('Detected anomalies are shown in the last column. True: Values are anomalous, False: Values are normal')
                     eng_fe = eng_fe.reindex(sorted(eng_fe.columns), axis=1)
+                    eng_fe.loc[:,'anomaly'] = results.anomaly
+                    eng_fe.anomaly = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
+
+                    def color_anomalies(val):
+                        color = 'green' if val else 'red'
+                        return f'background-color: {color}'
+
                     st.dataframe(eng_fe)
 
+                    download_csv(eng_fe)
+
+
                     st.title('Results')
-                    st.dataframe(df_res)
+                    if check_label()[0]:
+                        st.dataframe(df_res)
+                    else:
+                        st.write('Evaluation is not supported currently as no labels were provided.')
 
 
 

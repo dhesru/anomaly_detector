@@ -20,11 +20,19 @@ def data_uploader():
         sensors = st.multiselect(
             'Please select the sensor variables',
             col_names)
+        col_names.insert(0, 'No Label')
+
+        label = st.selectbox("Please select the label column, if any. This label column shall be used for the evaluation of the model. If there are no labels is this dataset, kindly select 'No labels' option.",col_names)
         st.session_state.df = df
         if st.button('Confirm variables selected'):
             st.session_state.sensors = sensors
-            print_statement = 'You have selected the following columns: ' + str(sensors)
-            st.warning(print_statement)
+            st.session_state.label = label
+            st.write(f"You have selected the following columns as sensor variables:  **{', '.join(sensors)}**")
+            if label == 'No Label':
+                st.write('You have not selected any labels, hence model evaluation metrics may not be available.')
+            else:
+                st.write(f"Your label column is: **{label}**")
+            st.success('You have successfully selected the required variables. Have fun detecting those anomalies!')
 
 def info():
     '''Prints information of the page.'''
