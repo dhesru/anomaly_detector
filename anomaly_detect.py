@@ -108,21 +108,27 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
         isf = IsolationForest(random_state=0, contamination=0.0009).fit(X.values)
         df_c['anomaly'] = pd.Series(isf.predict(X.values))
         df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
+    st.session_state.model = isf
+    st.session_state.model_type = 'iso'
     if use_label:
         df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x[label]), axis=1)
 
         tp, fp, fn = get_conf_matrix_metrics(df_c)
         try:
             precision = (tp / (tp + fp)) * 100
+            precision = np.round(precision,2)
         except ZeroDivisionError:
             precision = np.nan
 
         try:
             recall = (tp / (tp + fn)) * 100
+            recall = np.round(recall, 2)
         except ZeroDivisionError:
             recall = np.nan
 
         f1_score = (precision * recall) / (precision + recall)
+        if f1_score != np.nan:
+            f1_score = np.round(f1_score,2)
 
     return precision, recall, f1_score, tp, fp, fn, df_c,eng_fe
 
@@ -154,8 +160,6 @@ def detect_anomalies():
         n_comp = 2 # number of PCA components
         fe = True
         window = 5
-
-
 
         option = st.selectbox('Anomaly detection Type', (
         'Isolation Forest', 'DBSCAN (Coming soon)', 'SVM (Coming soon)'))
@@ -190,7 +194,7 @@ def detect_anomalies():
 
                     st.title('Results')
                     if check_label()[0]:
-                        st.dataframe(df_res)
+                        st.dataframe(df_res.style.format("{:.2}"))
                     else:
                         st.write('Evaluation is not supported currently as no labels were provided.')
 
