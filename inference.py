@@ -47,7 +47,7 @@ def infer():
                 st.write('Evaluation is not supported currently as no labels were provided.')
 
 def main():
-    st.title('Infer Based on Trained models')
+    st.title('Inference Based on Trained models')
     if 'model' not in st.session_state:
         st.write('Please train your model in the Detect Anomalies section.')
     else:
