@@ -5,6 +5,8 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
+from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score
+from sklearn.model_selection import GridSearchCV
 
 
 st.title('Anomaly Detector for Multivariate timeseries')
@@ -67,7 +69,32 @@ def norm_score(x):
     '''Normalize Probability Score'''
     return 1 - (x - np.min(x)) / (np.max(x) - np.min(x))
 
-def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
+def optmized_model(X_train,y_train,contamination_rate):
+    '''Use GridSearch to optimze the model for f1_score. Obtain the best parameters and return it'''
+    if not isinstance(X_train, np.ndarray):
+        X_train = X_train.values
+    n_estimators = [50, 100]
+    max_features = [1.0, 5, 10]
+    bootstrap = [True]
+    param_grid = dict(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap)
+
+    # Build the gridsearch
+    model_isf = IsolationForest(n_estimators=n_estimators,
+                                max_features=max_features,
+                                contamination=contamination_rate,
+                                bootstrap=False,
+                                n_jobs=-1)
+
+    # Define an f1_scorer
+    f1sc = make_scorer(f1_score, average='macro')
+    y_tr = np.where(y_train == 1, -1, 1)
+    grid = GridSearchCV(estimator=model_isf, param_grid=param_grid, cv=3, scoring=f1sc)
+    print(X_train)
+    grid_results = grid.fit(X=X_train, y=y_tr)
+    return grid_results
+
+def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor_cols,inf):
+    '''Anomaly Detection pipeline using Isolation Forest'''
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()
@@ -100,16 +127,50 @@ def anomaly_detection_pipeline(df, scale, pca, n_comp, fe, window,sensor_cols):
             X_feats.append(col_name)
         X.columns = col_names
         X = X[X_feats]
-    if isinstance(X, np.ndarray):
-        isf = IsolationForest(random_state=0, contamination=0.0009).fit(X)
-        df_c['anomaly'] = pd.Series(isf.predict(X))
-        df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X)))
+    if inf:
+        if isinstance(X, np.ndarray):
+            isf = st.session_state.model
+            df_c['anomaly'] = pd.Series(isf.predict(X))
+            df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X)))
+        else:
+            isf = st.session_state.model
+            df_c['anomaly'] = pd.Series(isf.predict(X.values))
+            df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
+
     else:
-        isf = IsolationForest(random_state=0, contamination=0.0009).fit(X.values)
-        df_c['anomaly'] = pd.Series(isf.predict(X.values))
-        df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
-    st.session_state.model = isf
-    st.session_state.model_type = 'iso'
+        if use_label:
+            y = df_c[[label]]
+            contamination_rate = y.value_counts().get(1) / y.value_counts().get(0)
+            grid_results = optmized_model(X,y,contamination_rate)
+            isf = IsolationForest(n_estimators=grid_results.best_params_.get('n_estimators'),
+                                  max_features=grid_results.best_params_.get('max_features'),
+                                  contamination=contamination_rate,
+                                  bootstrap=grid_results.best_params_.get('bootstrap'),
+                                  n_jobs=-1)
+            if isinstance(X, np.ndarray):
+                isf = isf.fit(X)
+                df_c['anomaly'] = pd.Series(isf.predict(X))
+                df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X)))
+            else:
+                isf = isf.fit(X.values)
+                df_c['anomaly'] = pd.Series(isf.predict(X.values))
+                df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
+            st.session_state.model = isf
+            st.session_state.model_type = 'iso'
+        else:
+            if isinstance(X, np.ndarray):
+                isf = IsolationForest(random_state=0, contamination=0.0009).fit(X)
+                df_c['anomaly'] = pd.Series(isf.predict(X))
+                df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X)))
+            else:
+                isf = IsolationForest(random_state=0, contamination=0.0009).fit(X.values)
+                df_c['anomaly'] = pd.Series(isf.predict(X.values))
+                df_c['probability_score'] = pd.Series(norm_score(isf.decision_function(X.values)))
+            st.session_state.model = isf
+            st.session_state.model_type = 'iso'
+
+
+
     if use_label:
         df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x[label]), axis=1)
 
@@ -168,8 +229,8 @@ def detect_anomalies():
 
             if st.button('Start detecting anomalies'):
                 with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
-                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline(df, scale=scale, pca=pca, n_comp=n_comp,
-                                                                               fe=fe,window=window,sensor_cols=sensor_cols)
+                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_iso_fst(df, scale=scale, pca=pca, n_comp=n_comp,
+                                                                               fe=fe,window=window,sensor_cols=sensor_cols,inf=False)
                     row_dict = {'precision': [p], 'recall': [r], 'f1_score': [f1]}
                     df_res = pd.DataFrame.from_dict(row_dict)
                     results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)

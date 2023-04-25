@@ -14,7 +14,7 @@ def streamlit_menu(example=1):
         with st.sidebar:
             selected = option_menu(
                     menu_title="Anomaly Detector",  # required
-                    options=["Upload Data", "Detect Anomalies","Visualization of Results","Information"],
+                    options=["Upload Data", "Train & Detect Anomalies","Model Inference","Visualization of Results","Information"],
                     icons=["cloud-upload", "bi bi-search",'robot', "bi bi-graph-up-arrow", "bi bi-info-square"],  # optional
                     menu_icon="tools",  # optional
                     default_index=0,  # optional
@@ -30,10 +30,10 @@ selected = streamlit_menu(example=EXAMPLE_NO)
 
 if selected == "Upload Data":
     helpers.data_uploader()
-if selected == 'Detect Anomalies':
+if selected == 'Train & Detect Anomalies':
     anomaly_detect.detect_anomalies()
-# if selected == "Model Inference":
-#     inference.main()
+if selected == "Model Inference":
+    inference.main()
 if selected == 'Visualization of Results':
     data_visualization.viz_anomaly_data()
 if selected == 'Information':
