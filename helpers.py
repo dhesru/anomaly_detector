@@ -14,7 +14,7 @@ def data_uploader():
     uploaded_file = st.file_uploader("Upload a CSV file to detect anomalies..")
     if uploaded_file is not None:
         # Can be used wherever a "file-like" object is accepted:
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file,index_col=0)
         st.dataframe(df)
         col_names = list(df.columns)
         sensors = st.multiselect(
@@ -24,14 +24,21 @@ def data_uploader():
 
         label = st.selectbox("Please select the label column, if any. This label column shall be used for the evaluation of the model. If there are no labels is this dataset, kindly select 'No labels' option.",col_names)
         st.session_state.df = df
+        window_size_options = [x for x in range(5,20,5)]
+        window_size = st.selectbox(
+            'Select the window size you would want for computation of rolling values',window_size_options)
         if st.button('Confirm variables selected'):
             st.session_state.sensors = sensors
             st.session_state.label = label
+            if window_size == None:
+                window_size = 5
+            st.session_state.window_size = window_size
             st.write(f"You have selected the following columns as sensor variables:  **{', '.join(sensors)}**")
             if label == 'No Label':
                 st.write('You have not selected any labels, hence model evaluation metrics may not be available.')
             else:
                 st.write(f"Your label column is: **{label}**")
+            st.write(f"You have selected a window size of **{window_size}** for computation of rolling values.")
             st.success('You have successfully selected the required variables. Have fun detecting those anomalies!')
 
 def info():

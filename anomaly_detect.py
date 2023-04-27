@@ -5,7 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
-from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score
+from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score as f1_scorer
 from sklearn.model_selection import GridSearchCV
 
 
@@ -86,10 +86,9 @@ def optmized_model(X_train,y_train,contamination_rate):
                                 n_jobs=-1)
 
     # Define an f1_scorer
-    f1sc = make_scorer(f1_score, average='macro')
+    f1sc = make_scorer(f1_scorer, average='macro')
     y_tr = np.where(y_train == 1, -1, 1)
     grid = GridSearchCV(estimator=model_isf, param_grid=param_grid, cv=3, scoring=f1sc)
-    print(X_train)
     grid_results = grid.fit(X=X_train, y=y_tr)
     return grid_results
 
@@ -112,7 +111,10 @@ def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor
         pca = PCA(n_components=n_comp)
         pca.fit(X)
         X = pca.transform(X)
-        st.session_state.pca = X
+        if inf:
+            st.session_state.pca_test = X
+        else:
+            st.session_state.pca_train = X
 
         if use_label:
             X = pd.DataFrame(np.column_stack([df_c[[label]], X]))
@@ -128,6 +130,8 @@ def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor
         X.columns = col_names
         X = X[X_feats]
     if inf:
+        if use_label:
+            y = df_c[[label]]
         if isinstance(X, np.ndarray):
             isf = st.session_state.model
             df_c['anomaly'] = pd.Series(isf.predict(X))
@@ -173,6 +177,9 @@ def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor
 
     if use_label:
         df_c['hits'] = df_c.apply(lambda x: compare_anomaly(x.anomaly, x[label]), axis=1)
+        y_tr = np.where(y == 1, -1, 1)
+        y_pred = df_c['anomaly'].to_numpy()
+
 
         tp, fp, fn = get_conf_matrix_metrics(df_c)
         try:
@@ -191,7 +198,11 @@ def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor
         if f1_score != np.nan:
             f1_score = np.round(f1_score,2)
 
-    return precision, recall, f1_score, tp, fp, fn, df_c,eng_fe
+        recall = recall_score(y_tr, y_pred, average='macro')
+        precision = precision_score(y_tr, y_pred, average='macro')
+        f1_sc = f1_scorer(y_tr, y_pred, average='macro')
+
+    return precision, recall, f1_sc, tp, fp, fn, df_c,eng_fe
 
 @st.experimental_memo
 def convert_df(df):
@@ -220,7 +231,7 @@ def detect_anomalies():
         scale= True
         n_comp = 2 # number of PCA components
         fe = True
-        window = 5
+        window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
         'Isolation Forest', 'DBSCAN (Coming soon)', 'SVM (Coming soon)'))
