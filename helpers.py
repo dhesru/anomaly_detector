@@ -17,12 +17,13 @@ def data_uploader():
         df = pd.read_csv(uploaded_file,index_col=0)
         st.dataframe(df)
         col_names = list(df.columns)
+        col_names_ss = list(df.columns)
         sensors = st.multiselect(
             'Please select the sensor variables',
             col_names)
-        col_names.insert(0, 'No Label')
+        col_names_ss.insert(0, 'No Label')
 
-        label = st.selectbox("Please select the label column, if any. This label column shall be used for the evaluation of the model. If there are no labels is this dataset, kindly select 'No labels' option.",col_names)
+        label = st.selectbox("Please select the label column, if any. This label column shall be used for the evaluation of the model. If there are no labels is this dataset, kindly select 'No labels' option.",col_names_ss)
         st.session_state.df = df
         window_size_options = [x for x in range(5,20,5)]
         window_size = st.selectbox(
@@ -51,7 +52,7 @@ def info():
              )
     st.subheader("Upload Data")
     st.write('This tab is used for uploading of Sensor readings for anomaly detection. Once you have uploaded the CSV, select the sensor readings that needs to be utilized.')
-    st.subheader("Detect Anomalies")
+    st.subheader("Train & Detect Anomalies")
     st.write('This tab is used to detect anomalies. Once anomalies are detected, the condition indicators and evaluation metrics will be displayed.')
     st.subheader("Visualization of Results")
-    st.write('This tab is used for visualization of the results. It displays the Principal Compoenents on the data and anomalous points on time series data.')
+    st.write('This tab is used for visualization of the results. It displays the Principal Compoenents on the data and anomalous points on time series data for both training and inferenced data.')

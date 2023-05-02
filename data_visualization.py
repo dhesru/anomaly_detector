@@ -27,7 +27,7 @@ def viz_anomaly_data():
                 st.pyplot(plt)
                 plt.cla()
         if 'pca_test' in st.session_state:
-            with st.expander('View Principal Component Analysis Chart for test data'):
+            with st.expander('View Principal Component Analysis Chart for inferenced data'):
                 pca = st.session_state.pca_test
                 df = st.session_state.df
                 df['color'] = df.label.apply(lambda x: '#FF2400' if x == 1 else '#03AC13')
@@ -44,13 +44,13 @@ def viz_anomaly_data():
                 st.pyplot(plt)
                 plt.cla()
         if 'df_test' in st.session_state:
-            with st.expander("View Anomalous points on time series for test data"):
+            with st.expander("View Anomalous points on time series for inferenced data"):
                 sensor_cols_test = st.session_state.sensor_test
-                results_test = st.session_state.iso_results
+                results_test = st.session_state.iso_results_test
                 for i in range(ncol):
                     plt.plot(results_test[sensor_cols_test[i]],color='#1520A6',alpha=0.8)
                     plt.title("Anomalous points for " + str(sensor_cols_test[i]))
-                    anomaly_col = sensor_cols_test[i] + '_a'
+                    anomaly_col = sensor_cols_test[i]
                     plt.scatter(y=results_test[anomaly_col], x=results_test.index, c='#FF2400',marker='o',s=18)
                     st.pyplot(plt)
                     plt.cla()

@@ -222,8 +222,8 @@ def download_csv(df):
 
 def detect_anomalies():
     st.title('Detect Anomalies')
-    if 'df' not in st.session_state:
-        st.write('Please upload CSV file for anomaly detection.')
+    if 'df' not in st.session_state or 'sensors' not in st.session_state:
+        st.write('Please upload CSV file for anomaly detection and select the sensors you would like to consider for anomaly detection.')
 
     else:
         df = st.session_state.df
@@ -231,10 +231,14 @@ def detect_anomalies():
         scale= True
         n_comp = 2 # number of PCA components
         fe = True
-        window = st.session_state.window_size
+        if 'window_size' not in st.session_state:
+            window = 5
+        else:
+            window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
         'Isolation Forest', 'DBSCAN (Coming soon)', 'SVM (Coming soon)'))
+
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
 
