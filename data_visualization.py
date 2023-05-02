@@ -47,10 +47,12 @@ def viz_anomaly_data():
             with st.expander("View Anomalous points on time series for inferenced data"):
                 sensor_cols_test = st.session_state.sensor_test
                 results_test = st.session_state.iso_results_test
-                for i in range(ncol):
+                st.write(results_test)
+                ncol_t = len(sensor_cols_test)
+                for i in range(ncol_t):
                     plt.plot(results_test[sensor_cols_test[i]],color='#1520A6',alpha=0.8)
                     plt.title("Anomalous points for " + str(sensor_cols_test[i]))
-                    anomaly_col = sensor_cols_test[i]
+                    anomaly_col = sensor_cols_test[i] + '_a'
                     plt.scatter(y=results_test[anomaly_col], x=results_test.index, c='#FF2400',marker='o',s=18)
                     st.pyplot(plt)
                     plt.cla()

@@ -267,7 +267,6 @@ def detect_anomalies():
 
                     download_csv(eng_fe)
 
-
                     st.title('Results')
                     if check_label()[0]:
                         st.dataframe(df_res.style.format("{:.2}"))
