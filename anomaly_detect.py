@@ -220,9 +220,9 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
             df_c['probability_score'] = pd.Series(norm_score(dbscan.decision_function(X.values)))
     else:
         sh = X.shape[0]
-        sh = int(sh/2)
-        X = X[0:sh]
-        clustering = DBSCAN(eps=0.3,min_samples=10).fit(X)
+        sh = int(sh/20)
+
+        clustering = DBSCAN(eps=1200,min_samples=sh).fit(X)
         st.session_state.dbscan = clustering
         y_pred = clustering.labels_
 
@@ -272,7 +272,7 @@ def detect_anomalies():
             window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
-        'Isolation Forest', 'DBSCAN', 'SVM (Coming soon)'))
+        'Isolation Forest','SVM (Coming soon)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
