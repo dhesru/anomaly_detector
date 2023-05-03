@@ -205,6 +205,7 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
     p, r, f1, tp, fp, fn, results, eng_fe = [None] *8
 
     X = fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label)
+    X = X.to_numpy()
 
     if inf:
         if use_label:
@@ -218,6 +219,9 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
             df_c['anomaly'] = pd.Series(dbscan.predict(X.values))
             df_c['probability_score'] = pd.Series(norm_score(dbscan.decision_function(X.values)))
     else:
+        sh = X.shape[0]
+        sh = int(sh/2)
+        X = X[0:sh]
         clustering = DBSCAN(eps=0.3,min_samples=10).fit(X)
         st.session_state.dbscan = clustering
         y_pred = clustering.labels_
