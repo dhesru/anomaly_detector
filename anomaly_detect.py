@@ -7,7 +7,10 @@ from sklearn.ensemble import IsolationForest
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score as f1_scorer
 from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import LocalOutlierFactor
 
+
+CONTAMINATION_RATE = 0.1
 
 st.title('Anomaly Detector for Multivariate timeseries')
 
@@ -187,8 +190,6 @@ def anomaly_detection_pipeline_iso_fst(df, n_comp, window,sensor_cols,inf):
         y_pred = df_c['anomaly'].to_numpy()
 
         tp, fp, fn = get_conf_matrix_metrics(df_c)
-
-
         recall = recall_score(y_tr, y_pred, average='macro')
         precision = precision_score(y_tr, y_pred, average='macro')
         f1_sc = f1_scorer(y_tr, y_pred, average='macro')
@@ -202,7 +203,7 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
     precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
-    p, r, f1, tp, fp, fn, results, eng_fe = [None] *8
+    p, r, f1, tp, fp, fn, results = [None] *8
 
     X = fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label)
     X = X.to_numpy()
@@ -237,8 +238,62 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
 
     return precision, recall, f1_sc, tp, fp, fn, results,eng_fe
 
+def conv_preds(preds):
+    '''Convert Predictions to 0 and 1 for easier computation'''
+    preds[np.where(preds >= 0)] = 0
+    preds[np.where(preds == -1)] = 1
+    return preds
 
+def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
+    '''Implementation Local Outlier Factor (LOF) algorithm for anomaly detection'''
+    df_c = df.copy()
+    X = df_c[list(sensor_cols)]
+    eng_fe = pd.DataFrame()
+    use_label, label = check_label()
+    precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
+    p, r, f1, tp, fp, fn, results,f1_sc = [None] * 8
 
+    X = fe_scale_pca(X, window, n_comp, inf, use_label, df_c, label)
+    X = X.to_numpy()
+
+    if inf:
+        if use_label:
+            y = df_c[[label]]
+        if isinstance(X, np.ndarray):
+            lof = st.session_state.lof
+            y_preds = conv_preds(lof.predict(X))
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X)))
+
+        else:
+            lof = st.session_state.lof
+            y_preds = conv_preds(lof.predict(X.values))
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X.values)))
+    else:
+        if use_label:
+            y_true = df_c[label]
+            contamination_rate = np.unique(y_true,return_counts=True)[1][1] / np.unique(y_true,return_counts=True)[1][0]
+        else:
+            contamination_rate = CONTAMINATION_RATE
+        st.session_state.model_type = 'lof'
+        lof = LocalOutlierFactor(n_neighbors=20, contamination=contamination_rate,novelty=True).fit(X)
+        st.session_state.lof = lof
+        y_preds = conv_preds(lof.predict(X))
+
+    if use_label:
+        y_true = df_c[label]
+        recall = recall_score(y_true, y_preds, average='macro')
+        precision = precision_score(y_true, y_preds, average='macro')
+        f1_sc = f1_scorer(y_true, y_preds, average='macro')
+    if isinstance(X, np.ndarray):
+        df_c['anomaly'] = pd.Series(lof.predict(X))
+        df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X)))
+    else:
+        df_c['anomaly'] = pd.Series(lof.predict(X.values))
+        df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X.values)))
+
+    return precision, recall, f1_sc, tp, fp, fn, df_c,eng_fe
 
 
 
@@ -272,7 +327,7 @@ def detect_anomalies():
             window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
-        'Isolation Forest','SVM (Coming soon)'))
+        'Isolation Forest','Local Outlier Factor (LOF)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
@@ -307,9 +362,42 @@ def detect_anomalies():
                     else:
                         st.write('Evaluation is not supported currently as no labels were provided.')
         elif option == 'DBSCAN':
+            ## Getting memory error for large datasets. Putting this on hold.
             if st.button('Start detecting anomalies'):
                 with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
                     p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_dbscan(df, n_comp=n_comp,window=window,sensor_cols=sensor_cols,inf=False)
+        elif option == 'Local Outlier Factor (LOF)':
+            if st.button('Start detecting anomalies'):
+                with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
+                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_lof(df, n_comp=n_comp,window=window,sensor_cols=sensor_cols,inf=False)
+                    row_dict = {'precision': [p], 'recall': [r], 'f1_score': [f1]}
+                    df_res = pd.DataFrame.from_dict(row_dict)
+                    print(df_res)
+                    st.write(df_res)
+                    results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
+                    for sensor in sensor_cols:
+                        sensor_name = sensor + '_a'
+                        results[sensor_name] = results[sensor] * results.anomaly_con
+                    st.session_state.lof_results = results
+                    st.success('Anomalies have been detected!')
+
+                    st.title('Condition Indicators and Detected Anomalies')
+                    st.write('Detected anomalies are shown in the last column. True: Values are anomalous, False: Values are normal')
+                    eng_fe = eng_fe.reindex(sorted(eng_fe.columns), axis=1)
+                    eng_fe.loc[:,'anomaly'] = results.anomaly
+                    eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
+                    eng_fe['probability_score'] = results.probability_score
+
+                    st.dataframe(eng_fe)
+
+                    download_csv(eng_fe)
+
+                    st.title('Results')
+                    if check_label()[0]:
+                        st.dataframe(df_res.style.format("{:.2}"))
+                    else:
+                        st.write('Evaluation is not supported currently as no labels were provided.')
+
 
 
 

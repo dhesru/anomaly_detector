@@ -3,16 +3,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 
+models = ['iso_results','lof_results']
+
+def check_mod_res():
+    """This function checks if trained model exists in the current session"""
+    for mod in models:
+        if mod in st.session_state:
+            return True,mod
+    return False,None
+
 
 def viz_anomaly_data():
     '''Vizualize Anomaly Detection results'''
     st.title('Visualize Detected Anomalies')
-    if 'iso_results' not in st.session_state:
+    mod_avail,model = check_mod_res()
+    if not mod_avail:
         st.write('Please upload time series data and run a anomaly detection model to visualize the anomalous points.')
     else:
         sensor_cols = st.session_state.sensors
         ncol = len(sensor_cols)
-        results = st.session_state.iso_results
+        results = st.session_state.get(model)
         results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
         for sensor in sensor_cols:
             sensor_name = sensor + '_a'
@@ -47,7 +57,6 @@ def viz_anomaly_data():
             with st.expander("View Anomalous points on time series for inferenced data"):
                 sensor_cols_test = st.session_state.sensor_test
                 results_test = st.session_state.iso_results_test
-                st.write(results_test)
                 ncol_t = len(sensor_cols_test)
                 for i in range(ncol_t):
                     plt.plot(results_test[sensor_cols_test[i]],color='#1520A6',alpha=0.8)
