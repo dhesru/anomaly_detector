@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
-import matplotlib.pyplot as plt
+from sklearn.cluster import DBSCAN
 from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score as f1_scorer
 from sklearn.model_selection import GridSearchCV
 
@@ -92,43 +92,49 @@ def optmized_model(X_train,y_train,contamination_rate):
     grid_results = grid.fit(X=X_train, y=y_tr)
     return grid_results
 
-def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor_cols,inf):
+def fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label):
+    """Common utility function to perform feature engineering, scaling and PCA to condense features"""
+    X = feature_engineer(X, window=window)
+
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    pca = PCA(n_components=n_comp)
+    pca.fit(X)
+    X = pca.transform(X)
+    if inf:
+        st.session_state.pca_test = X
+    else:
+        st.session_state.pca_train = X
+
+    if use_label:
+        X = pd.DataFrame(np.column_stack([df_c[[label]], X]))
+        col_names = [label]
+    else:
+        X = pd.DataFrame(X)
+        col_names = list()
+    X_feats = list()
+    for i in range(n_comp):
+        col_name = 'pca_' + str(i)
+        col_names.append(col_name)
+        X_feats.append(col_name)
+    X.columns = col_names
+    X = X[X_feats]
+
+    return X
+
+
+
+def anomaly_detection_pipeline_iso_fst(df, n_comp, window,sensor_cols,inf):
     '''Anomaly Detection pipeline using Isolation Forest'''
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
     precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
-    if fe:
-        X = feature_engineer(X, window=window)
-        eng_fe = X.copy()
 
-    if scale:
-        scaler = StandardScaler()
-        X = scaler.fit_transform(X)
+    X = fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label)
 
-    if pca:
-        pca = PCA(n_components=n_comp)
-        pca.fit(X)
-        X = pca.transform(X)
-        if inf:
-            st.session_state.pca_test = X
-        else:
-            st.session_state.pca_train = X
-
-        if use_label:
-            X = pd.DataFrame(np.column_stack([df_c[[label]], X]))
-            col_names = [label]
-        else:
-            X = pd.DataFrame(X)
-            col_names = list()
-        X_feats = list()
-        for i in range(n_comp):
-            col_name = 'pca_' + str(i)
-            col_names.append(col_name)
-            X_feats.append(col_name)
-        X.columns = col_names
-        X = X[X_feats]
     if inf:
         if use_label:
             y = df_c[[label]]
@@ -180,29 +186,57 @@ def anomaly_detection_pipeline_iso_fst(df, scale, pca, n_comp, fe, window,sensor
         y_tr = np.where(y == 1, -1, 1)
         y_pred = df_c['anomaly'].to_numpy()
 
-
         tp, fp, fn = get_conf_matrix_metrics(df_c)
-        try:
-            precision = (tp / (tp + fp)) * 100
-            precision = np.round(precision,2)
-        except ZeroDivisionError:
-            precision = np.nan
 
-        try:
-            recall = (tp / (tp + fn)) * 100
-            recall = np.round(recall, 2)
-        except ZeroDivisionError:
-            recall = np.nan
-
-        f1_score = (precision * recall) / (precision + recall)
-        if f1_score != np.nan:
-            f1_score = np.round(f1_score,2)
 
         recall = recall_score(y_tr, y_pred, average='macro')
         precision = precision_score(y_tr, y_pred, average='macro')
         f1_sc = f1_scorer(y_tr, y_pred, average='macro')
 
     return precision, recall, f1_sc, tp, fp, fn, df_c,eng_fe
+
+def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
+    '''Implementation DBSCAN algorithm for anomaly detection'''
+    df_c = df.copy()
+    X = df_c[list(sensor_cols)]
+    eng_fe = pd.DataFrame()
+    use_label, label = check_label()
+    precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
+    p, r, f1, tp, fp, fn, results, eng_fe = [None] *8
+
+    X = fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label)
+
+    if inf:
+        if use_label:
+            y = df_c[[label]]
+        if isinstance(X, np.ndarray):
+            dbscan = st.session_state.dbscan
+            df_c['anomaly'] = pd.Series(dbscan.predict(X))
+            df_c['probability_score'] = pd.Series(norm_score(dbscan.decision_function(X)))
+        else:
+            dbscan = st.session_state.dbscan
+            df_c['anomaly'] = pd.Series(dbscan.predict(X.values))
+            df_c['probability_score'] = pd.Series(norm_score(dbscan.decision_function(X.values)))
+    else:
+        clustering = DBSCAN(eps=0.3,min_samples=10).fit(X)
+        st.session_state.dbscan = clustering
+        y_pred = clustering.labels_
+
+        y_pred[np.where(y_pred >= 0)] = 0
+        y_pred[np.where(y_pred == -1)] = 1
+        if use_label:
+            y_tr = df_c[label]
+
+            recall = recall_score(y_tr, y_pred, average='macro')
+            precision = precision_score(y_tr, y_pred, average='macro')
+            f1_sc = f1_scorer(y_tr, y_pred, average='macro')
+
+    return precision, recall, f1_sc, tp, fp, fn, results,eng_fe
+
+
+
+
+
 
 @st.experimental_memo
 def convert_df(df):
@@ -227,25 +261,21 @@ def detect_anomalies():
 
     else:
         df = st.session_state.df
-        pca = True
-        scale= True
         n_comp = 2 # number of PCA components
-        fe = True
         if 'window_size' not in st.session_state:
             window = 5
         else:
             window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
-        'Isolation Forest', 'DBSCAN (Coming soon)', 'SVM (Coming soon)'))
+        'Isolation Forest', 'DBSCAN', 'SVM (Coming soon)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
 
             if st.button('Start detecting anomalies'):
                 with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
-                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_iso_fst(df, scale=scale, pca=pca, n_comp=n_comp,
-                                                                               fe=fe,window=window,sensor_cols=sensor_cols,inf=False)
+                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_iso_fst(df, n_comp=n_comp,window=window,sensor_cols=sensor_cols,inf=False)
                     row_dict = {'precision': [p], 'recall': [r], 'f1_score': [f1]}
                     df_res = pd.DataFrame.from_dict(row_dict)
                     results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
@@ -272,10 +302,10 @@ def detect_anomalies():
                         st.dataframe(df_res.style.format("{:.2}"))
                     else:
                         st.write('Evaluation is not supported currently as no labels were provided.')
-
-
-
-
+        elif option == 'DBSCAN':
+            if st.button('Start detecting anomalies'):
+                with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
+                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_dbscan(df, n_comp=n_comp,window=window,sensor_cols=sensor_cols,inf=False)
 
 
 
