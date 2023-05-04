@@ -354,7 +354,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
 
         import pycaret
         if pycaret.__version__ <= '2.2.4':
-            setup(data=X, data_split_shuffl=True)
+            setup(data=X, data_split_shuffle=True)
         else:
             setup(data=X)
         sos = create_model('sos',shuffle=True)
