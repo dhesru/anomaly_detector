@@ -105,10 +105,10 @@ def fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label):
     pca = PCA(n_components=n_comp)
     pca.fit(X)
     X = pca.transform(X)
-    if inf:
-        st.session_state.pca_test = X
-    else:
-        st.session_state.pca_train = X
+    # if inf:
+    #     st.session_state.pca_test = X
+    # else:
+    #     st.session_state.pca_train = X
 
     if use_label:
         X = pd.DataFrame(np.column_stack([df_c[[label]], X]))
@@ -264,12 +264,14 @@ def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
             y = df_c[[label]]
         if isinstance(X, np.ndarray):
             lof = st.session_state.lof
+            st.session_state.df_viz_test = df_c
             y_preds = conv_preds(lof.predict(X))
             df_c['anomaly'] = pd.Series(y_preds)
             df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X)))
 
         else:
             lof = st.session_state.lof
+            st.session_state.df_viz_test = df_c
             y_preds = conv_preds(lof.predict(X.values))
             df_c['anomaly'] = pd.Series(y_preds)
             df_c['probability_score'] = pd.Series(norm_score(lof.decision_function(X.values)))
@@ -320,25 +322,30 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
 
     cdf = X_.join(df_c,on='old_ind')
     df_c = cdf[ori_cols]
-    st.session_state.df_viz = df_c
+
     del X_
 
     if inf:
         st.session_state.pca_test = X
+        st.session_state.df_viz_test = df_c
     else:
         st.session_state.pca_train = X
+        st.session_state.df_viz = df_c
 
     if inf:
         if use_label:
             y = df_c[[label]]
         if isinstance(X, np.ndarray):
             sos = st.session_state.sos
+
             y_preds = conv_preds(sos.predict(X))
             df_c['anomaly'] = pd.Series(y_preds)
             df_c['probability_score'] = pd.Series(sos.decision_function(X))
 
+
         else:
             sos = st.session_state.sos
+            st.session_state.df_viz_test = df_c
             y_preds = conv_preds(sos.predict(X.values))
             df_c['anomaly'] = pd.Series(y_preds)
             df_c['probability_score'] = pd.Series(sos.decision_function(X.values))
