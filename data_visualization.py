@@ -32,6 +32,10 @@ def viz_anomaly_data():
                 pca = st.session_state.pca_train
                 df = st.session_state.df_viz
                 df['color'] = df.label.apply(lambda x: '#FF2400' if x == 1 else '#03AC13')
+                print(pca)
+                if not isinstance(pca, np.ndarray):
+                    pca = pca.to_numpy()
+
                 plt.scatter(pca[:, 0], pca[:, 1],c=df.color,alpha=0.5,s=3)
                 plt.legend()
                 st.pyplot(plt)
@@ -39,7 +43,7 @@ def viz_anomaly_data():
         if 'pca_test' in st.session_state:
             with st.expander('View Principal Component Analysis Chart for inferenced data'):
                 pca = st.session_state.pca_test
-                df = st.session_state.df_viz
+                df = st.session_state.df_test
                 df['color'] = df.label.apply(lambda x: '#FF2400' if x == 1 else '#03AC13')
                 plt.scatter(pca[:, 0], pca[:, 1],c=df.color,alpha=0.5,s=3)
                 st.pyplot(plt)

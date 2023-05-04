@@ -303,7 +303,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
     '''Implementation Stochastic Outlier Selection (SOS) algorithm for anomaly detection'''
     df_c = df.copy()
     df_c = df_c[10000:15001]
-    st.session_state.df_viz = df_c
+
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
@@ -320,6 +320,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
 
     cdf = X_.join(df_c,on='old_ind')
     df_c = cdf[ori_cols]
+    st.session_state.df_viz = df_c
     del X_
 
     if inf:
