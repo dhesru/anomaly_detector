@@ -97,6 +97,7 @@ def optmized_model(X_train,y_train,contamination_rate):
 def fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label):
     """Common utility function to perform feature engineering, scaling and PCA to condense features"""
     X = feature_engineer(X, window=window)
+    st.session_state.fe_df = X
 
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
@@ -131,6 +132,7 @@ def anomaly_detection_pipeline_iso_fst(df, n_comp, window,sensor_cols,inf):
     '''Anomaly Detection pipeline using Isolation Forest'''
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
+    st.session_state.df_viz = df_c
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
     precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
@@ -199,6 +201,7 @@ def anomaly_detection_pipeline_dbscan(df, n_comp,window,sensor_cols,inf):
     '''Implementation DBSCAN algorithm for anomaly detection'''
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
+    st.session_state.df_viz = df_c
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
     precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
@@ -247,6 +250,7 @@ def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
     '''Implementation Local Outlier Factor (LOF) algorithm for anomaly detection'''
     df_c = df.copy()
     X = df_c[list(sensor_cols)]
+    st.session_state.df_viz = df_c
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
     precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
@@ -299,6 +303,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
     '''Implementation Stochastic Outlier Selection (SOS) algorithm for anomaly detection'''
     df_c = df.copy()
     df_c = df_c[10000:15001]
+    st.session_state.df_viz = df_c
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()
     use_label, label = check_label()
@@ -318,6 +323,11 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
     del X_
 
     if inf:
+        st.session_state.pca_test = X
+    else:
+        st.session_state.pca_train = X
+
+    if inf:
         if use_label:
             y = df_c[[label]]
         if isinstance(X, np.ndarray):
@@ -334,7 +344,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
     else:
         st.session_state.model_type = 'sos'
 
-        exp_name = setup(data=X)
+        setup(data=X)
         sos = create_model('sos')
         sos_predictions = predict_model(model=sos, data=X)
         y_preds = sos_predictions.Anomaly.to_numpy()
@@ -417,7 +427,8 @@ def detect_anomalies():
                     eng_fe.loc[:,'anomaly'] = results.anomaly
                     eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
                     eng_fe['probability_score'] = results.probability_score
-
+                    if 'fe_df' in st.session_state:
+                        st.dataframe(st.session_state.fe_df)
                     st.dataframe(eng_fe)
 
                     download_csv(eng_fe)
@@ -453,6 +464,8 @@ def detect_anomalies():
                     eng_fe.loc[:,'anomaly'] = results.anomaly
                     eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
                     eng_fe['probability_score'] = results.probability_score
+                    if 'fe_df' in st.session_state:
+                        st.dataframe(st.session_state.fe_df)
 
                     st.dataframe(eng_fe)
 
@@ -484,6 +497,8 @@ def detect_anomalies():
                     eng_fe.loc[:,'anomaly'] = results.anomaly
                     eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
                     eng_fe['probability_score'] = results.probability_score
+                    if 'fe_df' in st.session_state:
+                        st.dataframe(st.session_state.fe_df)
 
                     st.dataframe(eng_fe)
 
