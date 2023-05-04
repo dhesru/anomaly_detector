@@ -8,13 +8,12 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics import make_scorer,precision_score,recall_score,f1_score as f1_scorer
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import LocalOutlierFactor
+from pycaret.anomaly import setup,create_model,predict_model
 
 
 CONTAMINATION_RATE = 0.1
 
 st.title('Anomaly Detector for Multivariate timeseries')
-
-uploaded_file = st.file_uploader("Choose a CSV file for anomaly detection", accept_multiple_files=False)
 
 
 def feature_engineer(data, window):
@@ -296,6 +295,73 @@ def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
     return precision, recall, f1_sc, tp, fp, fn, df_c,eng_fe
 
 
+def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
+    '''Implementation Stochastic Outlier Selection (SOS) algorithm for anomaly detection'''
+    df_c = df.copy()
+    df_c = df_c[10000:15001]
+    X = df_c[list(sensor_cols)]
+    eng_fe = pd.DataFrame()
+    use_label, label = check_label()
+    precision, recall, f1_score, tp, fp, fn = ['No Labels'] * 6
+    p, r, f1, tp, fp, fn, results,f1_sc = [None] * 8
+
+    X = fe_scale_pca(X, window, n_comp, inf, use_label, df_c, label)
+    X.index = df_c.index
+
+    ori_cols = list(df_c.columns)
+    X = X.drop_duplicates()
+    X_ = X.copy()
+    X_['old_ind'] = X_.index
+
+    cdf = X_.join(df_c,on='old_ind')
+    df_c = cdf[ori_cols]
+    del X_
+
+    if inf:
+        if use_label:
+            y = df_c[[label]]
+        if isinstance(X, np.ndarray):
+            sos = st.session_state.sos
+            y_preds = conv_preds(sos.predict(X))
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = pd.Series(sos.decision_function(X))
+
+        else:
+            sos = st.session_state.sos
+            y_preds = conv_preds(sos.predict(X.values))
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = pd.Series(sos.decision_function(X.values))
+    else:
+        st.session_state.model_type = 'sos'
+
+        exp_name = setup(data=X)
+        sos = create_model('sos')
+        sos_predictions = predict_model(model=sos, data=X)
+        y_preds = sos_predictions.Anomaly.to_numpy()
+        st.session_state.sos = sos
+        print(np.unique(y_preds,return_counts=True))
+
+
+
+        if isinstance(X, np.ndarray):
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = sos_predictions.Anomaly_Score #pd.Series(norm_score(sos.decision_function(X)))
+        else:
+            df_c['anomaly'] = pd.Series(y_preds)
+            df_c['probability_score'] = sos_predictions.Anomaly_Score#pd.Series(norm_score(sos.decision_function(X.values)))
+
+
+    if use_label:
+        y_true = df_c[label]
+        recall = recall_score(y_true, y_preds, average='macro')
+        precision = precision_score(y_true, y_preds, average='macro')
+        f1_sc = f1_scorer(y_true, y_preds, average='macro')
+
+
+
+    return precision, recall, f1_sc, tp, fp, fn, df_c,eng_fe
+
+
 
 @st.experimental_memo
 def convert_df(df):
@@ -327,7 +393,7 @@ def detect_anomalies():
             window = st.session_state.window_size
 
         option = st.selectbox('Anomaly detection Type', (
-        'Isolation Forest','Local Outlier Factor (LOF)'))
+        'Isolation Forest','Local Outlier Factor (LOF)','Stochastic Outlier Selection (SOS)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
@@ -379,6 +445,37 @@ def detect_anomalies():
                         sensor_name = sensor + '_a'
                         results[sensor_name] = results[sensor] * results.anomaly_con
                     st.session_state.lof_results = results
+                    st.success('Anomalies have been detected!')
+
+                    st.title('Condition Indicators and Detected Anomalies')
+                    st.write('Detected anomalies are shown in the last column. True: Values are anomalous, False: Values are normal')
+                    eng_fe = eng_fe.reindex(sorted(eng_fe.columns), axis=1)
+                    eng_fe.loc[:,'anomaly'] = results.anomaly
+                    eng_fe['anomaly'] = eng_fe.anomaly.apply(lambda x: 'True' if x == -1 else 'False')
+                    eng_fe['probability_score'] = results.probability_score
+
+                    st.dataframe(eng_fe)
+
+                    download_csv(eng_fe)
+
+                    st.title('Results')
+                    if check_label()[0]:
+                        st.dataframe(df_res.style.format("{:.2}"))
+                    else:
+                        st.write('Evaluation is not supported currently as no labels were provided.')
+        elif option == 'Stochastic Outlier Selection (SOS)':
+            if st.button('Start detecting anomalies'):
+                with st.spinner('Running anomaly detection. Please hold as this may take some time...'):
+                    p, r, f1, tp, fp, fn, results,eng_fe = anomaly_detection_pipeline_sos(df, n_comp=n_comp,window=window,sensor_cols=sensor_cols,inf=False)
+
+                    row_dict = {'precision': [p], 'recall': [r], 'f1_score': [f1]}
+                    df_res = pd.DataFrame.from_dict(row_dict)
+                    st.write(df_res)
+                    results['anomaly_con'] = results.anomaly.apply(lambda x: 1 if x == -1 else np.nan)
+                    for sensor in sensor_cols:
+                        sensor_name = sensor + '_a'
+                        results[sensor_name] = results[sensor] * results.anomaly_con
+                    st.session_state.sos_results = results
                     st.success('Anomalies have been detected!')
 
                     st.title('Condition Indicators and Detected Anomalies')

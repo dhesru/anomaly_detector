@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-models = ['iso_results','lof_results']
+models = ['iso_results','lof_results','sos_results']
 
 def check_mod_res():
     """This function checks if trained model exists in the current session"""
