@@ -140,6 +140,14 @@ def anomaly_detection_pipeline_iso_fst(df, n_comp, window,sensor_cols,inf):
     X = fe_scale_pca(X,window,n_comp,inf,use_label,df_c,label)
 
     if inf:
+        st.session_state.pca_test = X
+        st.session_state.df_viz_test = df_c
+    else:
+        st.session_state.pca_train = X
+        st.session_state.df_viz = df_c
+
+
+    if inf:
         if use_label:
             y = df_c[[label]]
         if isinstance(X, np.ndarray):
@@ -258,6 +266,13 @@ def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
 
     X = fe_scale_pca(X, window, n_comp, inf, use_label, df_c, label)
     X = X.to_numpy()
+
+    if inf:
+        st.session_state.pca_test = X
+        st.session_state.df_viz_test = df_c
+    else:
+        st.session_state.pca_train = X
+        st.session_state.df_viz = df_c
 
     if inf:
         if use_label:
@@ -411,11 +426,11 @@ def detect_anomalies():
         else:
             window = st.session_state.window_size
 
-        # option = st.selectbox('Anomaly detection Type', (
-        # 'Isolation Forest','Local Outlier Factor (LOF)','Stochastic Outlier Selection (SOS)'))
-
         option = st.selectbox('Anomaly detection Type', (
-            'Isolation Forest', 'Local Outlier Factor (LOF)'))
+        'Isolation Forest','Local Outlier Factor (LOF)','Stochastic Outlier Selection (SOS)'))
+
+        # option = st.selectbox('Anomaly detection Type', (
+        #     'Isolation Forest', 'Local Outlier Factor (LOF)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
