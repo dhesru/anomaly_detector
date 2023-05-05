@@ -368,7 +368,7 @@ def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
         st.session_state.model_type = 'sos'
 
         setup(data=X)
-        sos = create_model('sos',shuffle=True)
+        sos = create_model('sos')
         sos_predictions = predict_model(model=sos, data=X)
         y_preds = sos_predictions.Anomaly.to_numpy()
         st.session_state.sos = sos
