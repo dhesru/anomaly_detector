@@ -411,8 +411,11 @@ def detect_anomalies():
         else:
             window = st.session_state.window_size
 
+        # option = st.selectbox('Anomaly detection Type', (
+        # 'Isolation Forest','Local Outlier Factor (LOF)','Stochastic Outlier Selection (SOS)'))
+
         option = st.selectbox('Anomaly detection Type', (
-        'Isolation Forest','Local Outlier Factor (LOF)','Stochastic Outlier Selection (SOS)'))
+            'Isolation Forest', 'Local Outlier Factor (LOF)'))
 
         sensor_cols = st.session_state.sensors
         if option == 'Isolation Forest':
