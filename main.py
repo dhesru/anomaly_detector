@@ -13,10 +13,10 @@ def streamlit_menu(example=1):
         # 1. as sidebar menu
         with st.sidebar:
             selected = option_menu(
-                    menu_title="Anomaly Detector",  # required
+                    menu_title="AnoBot",  # required
                     options=["Upload Data", "Train & Detect Anomalies","Visualization of Results","Model Inference","Information"],
-                    icons=["cloud-upload", "bi bi-search","bi bi-graph-up-arrow",'robot', "bi bi-info-square"],  # optional
-                    menu_icon="tools",  # optional
+                    icons=["cloud-upload", "bi bi-search","bi bi-graph-up-arrow",'bullseye', "bi bi-info-square"],  # optional
+                    menu_icon="robot",  # optional
                     default_index=0,  # optional
 
                     styles = {"nav-link-selected": {"background-color": "#009999"},

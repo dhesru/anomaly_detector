@@ -13,7 +13,7 @@ from pycaret.anomaly import setup,create_model,predict_model
 
 CONTAMINATION_RATE = 0.1
 
-st.title('Anomaly Detector for Multivariate timeseries')
+st.title('Anomaly Detector (AnoBot) for Multivariate timeseries')
 
 
 def feature_engineer(data, window):
@@ -319,7 +319,8 @@ def anomaly_detection_pipeline_lof(df, n_comp,window,sensor_cols,inf):
 def anomaly_detection_pipeline_sos(df, n_comp,window,sensor_cols,inf):
     '''Implementation Stochastic Outlier Selection (SOS) algorithm for anomaly detection'''
     df_c = df.copy()
-    df_c = df_c[10000:15001]
+    if df_c.shape[0] > 5000:
+        df_c = df_c[0:5001]
 
     X = df_c[list(sensor_cols)]
     eng_fe = pd.DataFrame()

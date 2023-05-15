@@ -9,9 +9,8 @@ def convert(string):
 
 def data_uploader():
     '''This function is used for uploading CSV file'''
-    st.title('Welcome to Anomaly Detector')
 
-    uploaded_file = st.file_uploader("Upload a CSV file to detect anomalies..")
+    uploaded_file = st.file_uploader("Upload a CSV file for the AnoBot to detect anomalies..")
     if uploaded_file is not None:
         # Can be used wherever a "file-like" object is accepted:
         df = pd.read_csv(uploaded_file,index_col=0)
