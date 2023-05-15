@@ -44,14 +44,16 @@ def data_uploader():
 def info():
     '''Prints information of the page.'''
     st.title('Information')
-    st.write('This anomaly detector derives condition indicators such as Standard Deviation, Mean, Kurtosis, Variance and Max using a rolling window of size 5. '
+    st.write('This anomaly detector derives condition indicators such as Standard Deviation, Mean, Kurtosis, Variance and Max using a rolling window size between 5 and 15 (Customizable). '
              'The derived features are then condensed into 5 components using Principal Component Analysis.'
-             ' These features are the fed into Isolation forest for anomalous points to be predicted.'
+             ' These features are the fed into algorithm of choice (Isolation forest, Local Outlier Factor(LOF), Stochastic Outlier Selection (SOS)) for anomalous points to be predicted.'
              ' To begin detecting anomalous points in your multivariate time series, proceed to upload.'
              )
     st.subheader("Upload Data")
     st.write('This tab is used for uploading of Sensor readings for anomaly detection. Once you have uploaded the CSV, select the sensor readings that needs to be utilized.')
     st.subheader("Train & Detect Anomalies")
-    st.write('This tab is used to detect anomalies. Once anomalies are detected, the condition indicators and evaluation metrics will be displayed.')
+    st.write('This tab is used to detect anomalies. You may chose your choice of algorithm to be used for anomaly detection. Once the anomalies are detected, the condition indicators and evaluation metrics will be displayed. ')
     st.subheader("Visualization of Results")
     st.write('This tab is used for visualization of the results. It displays the Principal Compoenents on the data and anomalous points on time series data for both training and inferenced data.')
+    st.subheader('Model Inference')
+    st.write('This tab is used for detecting anomalies on new dataset. The model which was trained last, shall be utilized in the inferencing.')
